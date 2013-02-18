@@ -19,6 +19,8 @@
  *   http://oss.metaparadigm.com/json-c/
  *
  *  CHANGES:
+ *  v1.3 (mapandfold@gmail.com)
+ *   + enhancement of Compare
  *  v1.2
  *   + support of currency data type
  *   + right trim unquoted string
@@ -5247,10 +5249,36 @@ function TSuperObject.Compare(const obj: ISuperObject): TSuperCompareResult;
       Result := cpGreat;
   end;
 
+  function GetArrayCompResult(const A1, A2: TSuperArray): TSuperCompareResult;
+  var
+    I: Integer;
+    C: Integer;
+  begin
+    Result := cpEqu;
+    C := Min(A1.Length, A2.Length) - 1;
+    for I := 0 to C do
+    begin
+      Result := A1.N[I].Compare(A2.N[I]);
+      if Result <> cpEqu then Exit;
+    end;
+    C := A1.Length - A2.Length;
+    if C > 0 then
+      Result := cpGreat
+    else if C < 0 then
+      Result := cpLess;
+  end;
+
 begin
   case DataType of
+    stNull:
+      case ObjectGetType(obj) of
+        stNull: Result := cpEqu;
+      else
+        Result := cpLess;
+      end;
     stBoolean:
       case ObjectGetType(obj) of
+        stNull:    Result := cpGreat;
         stBoolean: Result := GetIntCompResult(ord(FO.c_boolean) - ord(obj.AsBoolean));
         stDouble:  Result := GetDblCompResult(ord(FO.c_boolean) - obj.AsDouble);
         stCurrency:Result := GetDblCompResult(ord(FO.c_boolean) - obj.AsCurrency);
@@ -5261,6 +5289,7 @@ begin
       end;
     stDouble:
       case ObjectGetType(obj) of
+        stNull:    Result := cpGreat;
         stBoolean: Result := GetDblCompResult(FO.c_double - ord(obj.AsBoolean));
         stDouble:  Result := GetDblCompResult(FO.c_double - obj.AsDouble);
         stCurrency:Result := GetDblCompResult(FO.c_double - obj.AsCurrency);
@@ -5271,6 +5300,7 @@ begin
       end;
     stCurrency:
       case ObjectGetType(obj) of
+        stNull:    Result := cpGreat;
         stBoolean: Result := GetDblCompResult(FO.c_currency - ord(obj.AsBoolean));
         stDouble:  Result := GetDblCompResult(FO.c_currency - obj.AsDouble);
         stCurrency:Result := GetDblCompResult(FO.c_currency - obj.AsCurrency);
@@ -5281,6 +5311,7 @@ begin
       end;
     stInt:
       case ObjectGetType(obj) of
+        stNull:    Result := cpGreat;
         stBoolean: Result := GetIntCompResult(FO.c_int - ord(obj.AsBoolean));
         stDouble:  Result := GetDblCompResult(FO.c_int - obj.AsDouble);
         stCurrency:Result := GetDblCompResult(FO.c_int - obj.AsCurrency);
@@ -5291,11 +5322,19 @@ begin
       end;
     stString:
       case ObjectGetType(obj) of
+        stNull:    Result := cpGreat;
         stBoolean,
         stDouble,
         stCurrency,
         stInt,
         stString:  Result := GetIntCompResult(StrComp(PSOChar(AsString), PSOChar(obj.AsString)));
+      else
+        Result := cpError;
+      end;
+    stArray:
+      case ObjectGetType(obj) of
+        stNull:   Result := cpGreat;
+        stArray:  Result := GetArrayCompResult(AsArray, obj.AsArray);
       else
         Result := cpError;
       end;
